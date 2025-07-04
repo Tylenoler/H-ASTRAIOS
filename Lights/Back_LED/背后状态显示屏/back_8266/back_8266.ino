@@ -1,16 +1,17 @@
 #include <FastLED.h>
+#include <ESP8266WiFi.h> // 可选，用于WiFi功能
 
 // ===== 可配置参数 =====
-#define LED_PIN     6     // LED数据引脚
-#define NUM_LEDS    64    // LED数量（根据你的灯带修改）
+#define LED_PIN     D4      // 使用ESP8266的D4引脚（GPIO2）
+#define NUM_LEDS    64      // LED数量
 #define LED_TYPE    WS2812B // LED型号
-#define COLOR_ORDER GRB   // 颜色顺序
-#define BRIGHTNESS  255   // 初始亮度(0-255)
-#define SPEEDTIME   50
-#define LightFactor1 128
-#define LightFactor2 250
+#define COLOR_ORDER GRB     // 颜色顺序
+#define BRIGHTNESS  255     // 初始亮度
+#define SPEEDTIME   50      // 帧延迟时间
+#define LightFactor1 128    // 亮度因子1
+#define LightFactor2 250    // 亮度因子2
 
-CRGB leds[NUM_LEDS];      // LED数组
+CRGB leds[NUM_LEDS];        // LED数组
 
 // ===== 帧动画系统 =====
 // 定义帧结构（存储在PROGMEM中以节省内存）
@@ -473,45 +474,28 @@ AnimationFrame frames[] = {
 
 const uint8_t FRAME_COUNT = sizeof(frames)/sizeof(AnimationFrame); // 总帧数
 
-// 动画模式
-enum AnimationMode {
-  FRAME_ANIMATION,        // 帧动画模式
-  SOLID_COLOR             // 其他模式...
-};
+// ===== 动画控制变量 =====
+enum AnimationMode { FRAME_ANIMATION, SOLID_COLOR };
+AnimationMode currentMode = FRAME_ANIMATION;
+CRGB solidColor = CRGB::Blue;
 
-AnimationMode currentMode = FRAME_ANIMATION; // 默认模式
-CRGB solidColor = CRGB::Blue;        // 单色模式的默认颜色
-
-// 帧动画变量
-uint8_t currentFrame = 0;            // 当前帧索引
-unsigned long lastFrameTime = 0;     // 上次帧切换时间
-bool playOnce = true;     // 是否只播放一次
-bool isPlaying = true;    // 当前是否正在播放
+uint8_t currentFrame = 0;
+unsigned long lastFrameTime = 0;
+bool playOnce = true;
+bool isPlaying = true;
 
 // ===== 辅助函数 =====
-void setAll(CRGB color) {
-  fill_solid(leds, NUM_LEDS, color);
-}
-
-// 从PROGMEM加载帧数据到LED
 void loadFrame(uint8_t frameIndex) {
   if (frameIndex >= FRAME_COUNT) return;
   
   AnimationFrame frame = frames[frameIndex];
   
-  // 确保帧数据长度不超过LED数量
-  uint16_t ledCount = min(frame.length, (uint16_t)NUM_LEDS);
-  
-  for (uint16_t i = 0; i < ledCount; i++) {
-    // 从PROGMEM读取32位颜色值
+  for (uint16_t i = 0; i < min(frame.length, (uint16_t)NUM_LEDS); i++) {
     uint32_t colorData = pgm_read_dword(&(frame.data[i]));
-    
-    // 提取RGB分量
     uint8_t r = (colorData >> 16) & 0xFF;
     uint8_t g = (colorData >> 8)  & 0xFF;
-    uint8_t b = colorData        & 0xFF;
+    uint8_t b = colorData & 0xFF;
     
-    // 应用帧的亮度因子 - 关键修复！
     r = (uint16_t)r * frame.brightnessFactor / 255;
     g = (uint16_t)g * frame.brightnessFactor / 255;
     b = (uint16_t)b * frame.brightnessFactor / 255;
@@ -519,27 +503,21 @@ void loadFrame(uint8_t frameIndex) {
     leds[i] = CRGB(r, g, b);
   }
   
-  // 如果帧数据少于LED数量，剩余LED设为黑色
-  for (uint16_t i = ledCount; i < NUM_LEDS; i++) {
+  // 填充剩余LED为黑色
+  for (uint16_t i = frame.length; i < NUM_LEDS; i++) {
     leds[i] = CRGB::Black;
   }
 }
 
-// 帧动画函数
 void frameAnimation() {
-  // 如果不在播放状态，直接返回
   if (!isPlaying) return;
   
-  // 检查是否到了切换帧的时间
   if (millis() - lastFrameTime >= frames[currentFrame].delayMs) {
-    // 如果是最后一帧且设置为只播放一次
     if (playOnce && currentFrame == FRAME_COUNT - 1) {
-      isPlaying = false; // 停止播放
-      Serial.println("动画播放完成，停止在最后一帧");
+      isPlaying = false;
       return;
     }
     
-    // 切换到下一帧
     currentFrame = (currentFrame + 1) % FRAME_COUNT;
     loadFrame(currentFrame);
     lastFrameTime = millis();
@@ -550,22 +528,22 @@ void frameAnimation() {
 // ===== 主程序 =====
 void setup() {
   Serial.begin(115200);
-  Serial.println("FastLED 帧动画系统启动");
+  Serial.println("\nESP8266 LED Animation System");
+  
+  // 可选：设置WiFi
+  // setupWiFi();
   
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
   
-  // 初始化并显示第一帧
   loadFrame(0);
   FastLED.show();
   lastFrameTime = millis();
-
 }
 
 void loop() {
   if (Serial.available()) {
-    char command = Serial.read();
-    handleCommand(command);
+    handleCommand(Serial.read());
   }
   
   switch(currentMode) {
@@ -573,76 +551,48 @@ void loop() {
       frameAnimation();
       break;
     case SOLID_COLOR:
-      setAll(solidColor);
+      fill_solid(leds, NUM_LEDS, solidColor);
       FastLED.show();
       break;
   }
+  
+  // 添加其他功能（如OTA更新、网络控制等）
 }
 
-//处理串口命令
 void handleCommand(char cmd) {
   switch(cmd) {
     case '0':
       currentMode = SOLID_COLOR;
-      Serial.println("模式: 单色");
+      Serial.println("Mode: Solid Color");
       break;
-      
-    case '6': // 帧动画模式
+    case '6':
       currentMode = FRAME_ANIMATION;
-      Serial.println("模式: 帧动画");
       currentFrame = 0;
       isPlaying = true;
       loadFrame(currentFrame);
       FastLED.show();
-      lastFrameTime = millis();
+      Serial.println("Mode: Frame Animation");
       break;
-      
-    case 'r': // 重置并重新播放
+    case 'r':
       currentFrame = 0;
       isPlaying = true;
       loadFrame(currentFrame);
       FastLED.show();
-      lastFrameTime = millis();
-      Serial.println("重置并重新播放动画");
+      Serial.println("Reset Animation");
       break;
-      
-    case 'p': // 暂停/继续
+    case 'p':
       isPlaying = !isPlaying;
-      Serial.print("播放状态: ");
-      Serial.println(isPlaying ? "继续" : "暂停");
+      Serial.print("Play State: ");
+      Serial.println(isPlaying ? "Playing" : "Paused");
       break;
-      
-    case 'o': // 切换播放模式
-      playOnce = !playOnce;
-      Serial.print("播放模式: ");
-      Serial.println(playOnce ? "单次播放" : "循环播放");
-      break;
-      
-    case 'f': // 跳转帧
+    case 'b':
       while(!Serial.available());
-      int frame = Serial.parseInt();
-      if (frame >= 0 && frame < FRAME_COUNT) {
-        currentFrame = frame;
-        isPlaying = true; // 跳转时自动继续播放
-        loadFrame(currentFrame);
-        FastLED.show();
-        lastFrameTime = millis();
-        Serial.print("跳转到帧: ");
-        Serial.println(frame);
-      }
-      break;
-      
-    case 'b': // 设置亮度
-      while(!Serial.available());
-      int brightness = Serial.parseInt();
-      FastLED.setBrightness(constrain(brightness, 0, 255));
-      Serial.print("亮度设置为: ");
-      Serial.println(brightness);
+      FastLED.setBrightness(constrain(Serial.parseInt(), 0, 255));
       FastLED.show();
+      Serial.println("Brightness Updated");
       break;
-      
     default:
-      Serial.println("未知命令");
+      Serial.println("Unknown Command");
       break;
   }
 }

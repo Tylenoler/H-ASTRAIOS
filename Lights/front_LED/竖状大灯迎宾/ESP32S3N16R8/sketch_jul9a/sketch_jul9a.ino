@@ -2886,7 +2886,6 @@ void processFrameAnimation(StripState &state, CRGB* targetLeds) {
 }
 
 // ===== 主程序 =====
-// ===== 主程序 =====
 void setup() {
   Serial.begin(115200);
   Serial.println("双灯带WS2812控制启动");
@@ -3006,6 +3005,7 @@ void handleCommand(char cmd) {
       break;
       
     case 'f': // 跳转帧
+    {
       while(!Serial.available());
       int frame = Serial.parseInt();
       if (frame >= 0 && frame < FRAME_COUNT) {
@@ -3019,6 +3019,74 @@ void handleCommand(char cmd) {
         Serial.println(frame);
       }
       break;
-
+    }
+      
+    case 'b': // 设置亮度
+    {
+      while(!Serial.available());
+      int brightness = Serial.parseInt();
+      FastLED.setBrightness(constrain(brightness, 0, 255));
+      Serial.print("亮度设置为: ");
+      Serial.println(brightness);
+      break;
+    }
+      
+    case 'm': // 切换模式
+      if (currentStrip->currentMode == FRAME_ANIMATION) {
+        currentStrip->currentMode = SOLID_COLOR;
+        Serial.print("灯带");
+        Serial.print(selectedStrip);
+        Serial.println(" 模式: 单色");
+      } else {
+        currentStrip->currentMode = FRAME_ANIMATION;
+        currentStrip->isPlaying = true;
+        Serial.print("灯带");
+        Serial.print(selectedStrip);
+        Serial.println(" 模式: 帧动画");
+      }
+      break;
+      
+    case 'c': // 设置单色模式颜色
+    {
+      while(!Serial.available());
+      int colorValue = Serial.parseInt();
+      currentStrip->solidColor = CRGB(colorValue >> 16, (colorValue >> 8) & 0xFF, colorValue & 0xFF);
+      Serial.print("灯带");
+      Serial.print(selectedStrip);
+      Serial.print(" 颜色设置为: 0x");
+      Serial.println(colorValue, HEX);
+      break;
+    }
+      
+    case 'p': // 打印状态
+    {
+      Serial.println("\n===== 系统状态 =====");
+      Serial.print("全局同步: ");
+      Serial.println(globalSyncMode ? "是" : "否");
+      
+      Serial.println("\n灯带1状态:");
+      Serial.print("模式: ");
+      Serial.println(strip1.currentMode == FRAME_ANIMATION ? "帧动画" : "单色");
+      Serial.print("当前帧: ");
+      Serial.println(strip1.currentFrame);
+      Serial.print("播放状态: ");
+      Serial.println(strip1.isPlaying ? "播放中" : "暂停");
+      
+      Serial.println("\n灯带2状态:");
+      Serial.print("模式: ");
+      Serial.println(strip2.currentMode == FRAME_ANIMATION ? "帧动画" : "单色");
+      Serial.print("当前帧: ");
+      Serial.println(strip2.currentFrame);
+      Serial.print("播放状态: ");
+      Serial.println(strip2.isPlaying ? "播放中" : "暂停");
+      
+      Serial.println("===================");
+      break;
+    }
+      
+    default:
+      Serial.println("未知命令");
+      Serial.println("可用命令: s,1,2,a,r,f,b,m,c,p");
+      break;
   }
 }

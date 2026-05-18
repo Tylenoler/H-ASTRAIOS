@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的嵌入式视界 | Embedded Portfolio</title>
+    <style>
+        /* --- 1. 全局设置 & Apple 风格变量 --- */
+        :root {
+            --bg-color: #f5f5f7; /* Apple 经典的浅灰背景 */
+            --card-bg: #ffffff;
+            --text-primary: #1d1d1f; /* 接近黑色但不是纯黑 */
+            --text-secondary: #86868b;
+            --accent-color: #0066cc; /* Apple Link Blue */
+            --nav-blur: rgba(255, 255, 255, 0.8);
+            --transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); /* 丝滑缓动 */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased; /* 让字体在 Mac 上更清晰 */
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* --- 2. 导航栏 (毛玻璃效果) --- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 48px;
+            background: var(--nav-blur);
+            backdrop-filter: blur(20px); /* 核心：毛玻璃 */
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-content {
+            width: 100%;
+            max-width: 980px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        .nav-links a {
+            color: var(--text-primary);
+            margin-left: 24px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .nav-links a:hover { opacity: 1; }
+
+        /* --- 3. Hero 区域 (简介) --- */
+        .hero {
+            text-align: center;
+            padding: 120px 20px 80px;
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 600;
+            letter-spacing: -0.003em;
+            margin-bottom: 16px;
+        }
+
+        .hero p {
+            font-size: 24px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            line-height: 1.4;
+        }
+
+        /* --- 4. 项目网格 (Bento Grid 风格) --- */
+        .grid-container {
+            max-width: 1020px; /* Apple常用的内容宽度 */
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 28px; /* 大圆角 */
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            cursor: pointer;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.02);
+            position: relative;
+        }
+
+        /* 鼠标悬停时的细微放大 */
+        .card:hover {
+            transform: scale(1.015);
+            box-shadow: 4px 12px 24px rgba(0,0,0,0.08);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 280px;
+            background-color: #eee;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 模拟图片占位 */
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+        
+        .card:hover .card-image img {
+            transform: scale(1.05);
+        }
+
+        /* 专门针对嵌入式的芯片/电路板背景模拟 */
+        .chip-bg {
+            background: radial-gradient(circle at center, #333 0%, #000 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.2);
+            font-size: 60px;
+        }
+
+        .card-content {
+            padding: 30px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: #e68a00; /* 类似于 iPhone Pro 的金色或其他高亮色 */
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* 不同的 Tag 颜色 */
+        .tag-blue { color: #0066cc; }
+        .tag-green { color: #009900; }
+
+        .card h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            line-height: 1.1;
+        }
+
+        .card p {
+            font-size: 17px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .cta-link {
+            font-size: 15px;
+            color: var(--accent-color);
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .cta-link:after {
+            content: '?';
+            font-size: 18px;
+            margin-left: 4px;
+            transition: transform 0.2s;
+        }
+
+        .card:hover .cta-link:after {
+            transform: translateX(3px);
+        }
+
+        /* --- 5. 页脚 --- */
+        footer {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(0,0,0,0.05);
+            margin-top: 60px;
+        }
+
+        /* --- 动画关键帧 --- */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 移动端适配 --- */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 36px; }
+            .hero p { font-size: 20px; }
+            .card-image { height: 220px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-content">
+            <div style="font-weight: 600; font-size: 18px;">? Dev.Log</div>
+            <div class="nav-links">
+                <a href="#projects">项目</a>
+                <a href="#about">关于</a>
+                <a href="#contact">联系</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>代码与硬件的协奏曲。</h1>
+        <p>欢迎来到我的嵌入式实验室。在这里，我用 C 语言、RTOS 和电路板构建连接物理世界的桥梁。</p>
+    </section>
+    
+    
+
+    <section class="grid-container" id="projects">
+        
+        <article class="card">
+            <div class="card-image chip-bg">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="2" width="20" height="20" rx="2"></rect>
+                    <path d="M12 2v20M2 12h20"></path>
+                    <circle cx="12" cy="12" r="4"></circle>
+                </svg>
+            </div>
+            <div class="card-content">
+                <div>
+                    <div class="card-tag tag-blue">STM32 / FreeRTOS</div>
+                    <h2>智能平衡机器人</h2>
+                    <p>基于 PID 算法与卡尔曼滤波，实现毫秒级姿态解算，即使在复杂地形也能稳如泰山。</p>
+                </div>
+                <span class="cta-link">查看技术细节</span>
+            </div>
+        </article>
+
+        <article class="card">
+            <div class="card-image" style="background-color: #f0f0f0;">
+                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#999;">
+                    [ IoT Dashboard UI Mockup ]
+                </div>
+            </div>
+            <div class="card-content">
+                <div>
+                    <div class="card-tag tag-green">ESP32 / MQTT</div>
+                    <h2>家庭环境监测站</h2>
+                    <p>低功耗设计，通过 AWS IoT Core 实时上传温湿度与空气质量数据，待机长达 6 个月。</p>
+                </div>
+                <span class="cta-link">查看架构图</span>
+            </div>
+        </article>
+
+        <article class="card">
+            <div class="card-image chip-bg" style="background: #1a1a1a;">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                    <line x1="6" y1="1" x2="6" y2="4"></line>
+                    <line x1="10" y1="1" x2="10" y2="4"></line>
+                    <line x1="14" y1="1" x2="14" y2="4"></line>
+                </svg>
+            </div>
+            <div class="card-content">
+                <div>
+                    <div class="card-tag">Linux / Qt</div>
+                    <h2>工业级 HMI 界面</h2>
+                    <p>为数控机床设计的触摸屏交互系统。专注于抗干扰性能与 UI 响应速度的极致优化。</p>
+                </div>
+                <span class="cta-link">查看源码</span>
+            </div>
+        </article>
+
+    </section>
+
+    <footer>
+        <p>Copyright ? 2024 Your Name. All rights reserved.</p>
+        <p style="margin-top: 8px;">Designed with precision.</p>
+    </footer>
+
+</body>
+</html>
